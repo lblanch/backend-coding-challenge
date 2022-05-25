@@ -36,6 +36,7 @@ func main() {
 	loadActions()
 	loadUsers()
 
+	// In case of non-existing users.json: comment above line and uncomment both below lines
 	//extractUsersFromActions()
 	//saveUsersToFile()
 
@@ -101,7 +102,20 @@ func saveUsersToFile() {
 }
 
 func getUserByID(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "TBD"})
+	receivedID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid id"})
+		return
+	}
+
+	for _, user := range users {
+		if user.ID == receivedID {
+			c.IndentedJSON(http.StatusOK, user)
+			return
+		}
+	}
+
+	c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid id"})
 }
 
 func getActionCountByUserID(c *gin.Context) {
