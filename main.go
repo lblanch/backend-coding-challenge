@@ -119,7 +119,21 @@ func getUserByID(c *gin.Context) {
 }
 
 func getActionCountByUserID(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "TBD"})
+	receivedID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid id"})
+		return
+	}
+
+	count := 0
+
+	for _, action := range actions {
+		if action.UserID == receivedID {
+			count++
+		}
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"count": count})
 }
 
 func getNextActionBreakdownByType(c *gin.Context) {
