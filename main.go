@@ -42,9 +42,17 @@ func main() {
 
 	// Define API's endpoints
 	router := gin.Default()
+
+	// Endpoint for Q1
 	router.GET("/users/:id", getUserByID)
+
+	// Endpoint for Q2
 	router.GET("/users/actions/:id", getActionCountByUserID)
+
+	// Endpoint for Q3
 	router.GET("/actions/next/:type", getNextActionBreakdownByType)
+
+	// Endpoint for Q4
 	router.GET("/users/referralIndex", getUsersReferralIndex)
 
 	// Start the server
@@ -137,7 +145,38 @@ func getActionCountByUserID(c *gin.Context) {
 }
 
 func getNextActionBreakdownByType(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "TBD"})
+	receivedType := c.Param("type")
+
+	// Map to keep track of users who have executed an action of the relevant type
+	userMap := make(map[int]time.Time)
+
+	// Map to count how many times different actions were taken next
+	nextActionMap := make(map[string]float64)
+
+	totalNextActions := 0
+
+	for _, action := range actions {
+		actionDate, ok := userMap[action.UserID]
+		if ok {
+			// Only take into account actions that are taken within a 24h window
+			if action.CreatedAt.Sub(actionDate).Hours() <= 24.0 {
+				nextActionMap[action.Type] = nextActionMap[action.Type] + 1
+				totalNextActions++
+			}
+			delete(userMap, action.UserID)
+		} else {
+			if action.Type == receivedType {
+				userMap[action.UserID] = action.CreatedAt
+			}
+		}
+	}
+
+	// Calculate probabilities
+	for index, actionCount := range nextActionMap {
+		nextActionMap[index] = actionCount / float64(totalNextActions)
+	}
+
+	c.IndentedJSON(http.StatusOK, nextActionMap)
 }
 
 func getUsersReferralIndex(c *gin.Context) {
