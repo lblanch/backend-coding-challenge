@@ -40,7 +40,7 @@ Again, the solution is roughly of linear complexity: O(#actions) + O(#referredUs
 
 **Note**, that this returns a list of users (and their referral index) only if they have made a `REFER_USER` action at least once. It does not include users whose referral index is 0. In order to include those users too, one would need to loop through all users, adding O(#users) complexity to the solution.
 
-Additionally, a small couple of functions have been created to generate a `user.json` file out of the `actions.json` existing file. The functions' code is included in the final version, but the call to the functions have been commented
+Additionally, a small couple of functions have been created to generate a `user.json` file out of the `actions.json` existing file. The functions' code is included in the final version, but the call to the functions have been commented. This was due to the fact that the `users.json` file was unavailable to download. It seems to be fixed now, and the file has been downloaded and added to the repository.
 
 ### Time breakdown
 
