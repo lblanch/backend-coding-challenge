@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -148,26 +149,41 @@ func getActionCountByUserID(c *gin.Context) {
 func getNextActionBreakdownByType(c *gin.Context) {
 	receivedType := c.Param("type")
 
-	// Map to keep track of users who have executed an action of the relevant type
-	userMap := make(map[int]time.Time)
+	// Map to store, in chronological order, the actions taken by a specific user, being userId the map's key
+	userActionsMap := make(map[int]*list.List)
+
+	// Map to keep track of all the actions of the relevant type taken by each user
+	userActionTypeMap := make(map[int][]*list.Element)
 
 	// Map to count how many times different actions were taken next
 	nextActionMap := make(map[string]float64)
 
 	totalNextActions := 0
+	var insertedAction *list.Element
 
+	// Organize actions chronologically by user and collect references to actions of the specified type
 	for _, action := range actions {
-		actionDate, ok := userMap[action.UserID]
+		userList, ok := userActionsMap[action.UserID]
 		if ok {
-			// Only take into account actions that are taken within a 24h window
-			if action.CreatedAt.Sub(actionDate).Hours() <= 24.0 {
-				nextActionMap[action.Type] = nextActionMap[action.Type] + 1
-				totalNextActions++
-			}
-			delete(userMap, action.UserID)
+			insertedAction = insertActionInOrder(userList, action)
 		} else {
-			if action.Type == receivedType {
-				userMap[action.UserID] = action.CreatedAt
+			userActionsMap[action.UserID] = list.New()
+			insertedAction = userActionsMap[action.UserID].PushFront(action)
+		}
+
+		if action.Type == receivedType {
+			userActionTypeMap[action.UserID] = append(userActionTypeMap[action.UserID], insertedAction)
+		}
+	}
+
+	// Find "next" actions
+	for _, receivedTypeActions := range userActionTypeMap {
+		for _, actionReference := range receivedTypeActions {
+			nextElement := actionReference.Next()
+			if nextElement != nil {
+				nextAction := nextElement.Value.(action)
+				nextActionMap[nextAction.Type] = nextActionMap[nextAction.Type] + 1
+				totalNextActions++
 			}
 		}
 	}
@@ -178,6 +194,15 @@ func getNextActionBreakdownByType(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, nextActionMap)
+}
+
+func insertActionInOrder(l *list.List, a action) *list.Element {
+	for e := l.Front(); e != nil; e = e.Next() {
+		if e.Value.(action).CreatedAt.After(a.CreatedAt) {
+			return l.InsertBefore(a, e)
+		}
+	}
+	return l.PushBack(a)
 }
 
 func getUsersReferralIndex(c *gin.Context) {
