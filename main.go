@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,9 @@ func main() {
 	// In case of non-existing users.json file: comment above line and uncomment both below lines
 	//extractUsersFromActions()
 	//saveUsersToFile()
+
+	// Sort actions list chronologically
+	sort.Slice(actions, func(i, j int) bool { return actions[i].CreatedAt.Before(actions[j].CreatedAt) })
 
 	// Define API's endpoints
 	router := gin.Default()
