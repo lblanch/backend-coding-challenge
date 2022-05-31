@@ -206,37 +206,82 @@ func insertActionInOrder(l *list.List, a action) *list.Element {
 }
 
 func getUsersReferralIndex(c *gin.Context) {
-	type userReferralInfo struct {
-		userID  int
-		referer int // ID of user who referred this user
+	type userReferralNode struct {
+		userID    int
+		referer   int // ID of user who referred this user, -1 otherwise
+		referrals int
 	}
 
-	// Map to keep track of user referrals
+	// Map to store the referrals tree
+	userReferralsTreeMap := make(map[int]userReferralNode)
+
+	// Map to store the final referral index
 	userReferralIndexMap := make(map[int]int)
 
-	// Slice to keep track of the order in which users are referred, and their referrers
-	var referralsOrder []userReferralInfo
+	// Map to keep track of referred users with no direct referrals
+	// In the tree structure, these would be the leaves
+	treeLeavesMap := make(map[int]int)
 
-	// Populate the map with each user's direct referrals
+	// Slice to keep track of the nodes to be visited when navigating the tree in reverse
+	var referralsOrder []int
+
+	// Create the referrals tree so each node has the amount of direct referrals for each user
 	for _, action := range actions {
-		if action.Type == "REFER_USER" {
-			// Increase the amount of users referred by action.UserID
-			userReferralIndexMap[action.UserID] = userReferralIndexMap[action.UserID] + 1
+		if action.Type == "REFER_USER" && action.UserID != action.TargetUser {
+			// Create or update node for referer user
+			refererNode, ok := userReferralsTreeMap[action.UserID]
+			if ok {
+				refererNode.referrals++
+				userReferralsTreeMap[action.UserID] = refererNode
+			} else {
+				userReferralsTreeMap[action.UserID] = userReferralNode{action.UserID, -1, 1}
+			}
 
-			// Keep track of the order in which users are referred and
-			// define action.UserID as the referrer for action.TargetUser
-			referralsOrder = append(referralsOrder, userReferralInfo{action.TargetUser, action.UserID})
+			// Referer user cannot be a leave, remove it from the treeLeavesMap
+			delete(treeLeavesMap, action.UserID)
+
+			// Create or update target user's info
+			targetNode, ok := userReferralsTreeMap[action.TargetUser]
+			if ok {
+				// Update target user's referer
+				targetNode.referer = action.UserID
+				userReferralsTreeMap[action.TargetUser] = targetNode
+			} else {
+				// Create node for target user
+				userReferralsTreeMap[action.TargetUser] = userReferralNode{action.TargetUser, action.UserID, 0}
+
+				// Store target user as potential tree leave
+				treeLeavesMap[action.TargetUser] = action.TargetUser
+			}
 		}
 	}
 
-	// Add indirect referrals to calculate final referral index
-	// Traverse the referralsOrder slice in reverse, skipping the last position
-	// as it would have referrals = 0
-	for i := len(referralsOrder) - 2; i >= 0; i-- {
-		targetInfo := referralsOrder[i]
+	// Calculate the final referral index by adding indirect referrals to the already calculated direct ones
 
-		// Update referer's referral index to include referred's referrals (indirect referrals)
-		userReferralIndexMap[targetInfo.referer] = userReferralIndexMap[targetInfo.referer] + userReferralIndexMap[targetInfo.userID]
+	// 1. Add tree leaves to referralsOrder slice as first nodes to visit
+	for _, leaf := range treeLeavesMap {
+		referralsOrder = append(referralsOrder, leaf)
+	}
+
+	// 2. Traverse the tree in reverse (starting from the leaves)
+	for i := 0; i < len(referralsOrder); i++ {
+		userID := referralsOrder[i]
+
+		nodeInfo := userReferralsTreeMap[userID]
+
+		// If the node has a parent
+		if nodeInfo.referer >= 0 {
+			// Add it to the slice to be visited later
+			referralsOrder = append(referralsOrder, nodeInfo.referer)
+
+			// And increase their referrals amount with the current node's ones
+			parentNode := userReferralsTreeMap[nodeInfo.referer]
+			parentNode.referrals = parentNode.referrals + nodeInfo.referrals
+			userReferralsTreeMap[nodeInfo.referer] = parentNode
+		}
+
+		// Update the referral index for the current node
+		userReferralIndexMap[userID] = nodeInfo.referrals
 	}
 
 	c.JSON(http.StatusOK, userReferralIndexMap)
