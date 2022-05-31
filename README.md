@@ -28,11 +28,11 @@ The following API endpoints are accessible, and offer the solution for each ques
 Disclaimer: this was the first Go application that I've worked with.
 All the code can be found in the `main.go` file, and the `actions.json` and `users.json` can be found in the `data` folder.
 
-It has been assumed that the actions list is always provided in chronological order (specially relevant for Q3 and Q4).
+The actions list is always sorted in chronological order before the server is started (specially relevant for Q3 and Q4). This is done using the `sort` package (part of the standard library) and it has complexity of O(n log(n)).
 
 Q1 and Q2 are pretty straightforward, they are both implemented using a simple for loop. Both are of linear complexity: O(#users) for Q1 and O(#actions) for Q2
 
-For Q3 the assumption was made that only the next actions taken within 24h window are relevant. It loops once through all the actions in the action list and it uses maps to store intermediate and final data, since insert, access and deletion operations in a map have constant time complexity. The solution is roughly of linear complexity too: O(#actions) + O(#unique actions).
+For Q3 it loops once through all the actions in the action list and it uses maps to store intermediate and final data, since insert, access and deletion operations in a map have constant time complexity. The solution is roughly of linear complexity too: O(#actions) + O(#unique actions).
 
 Q4 was the trickiest one to figure out its most efficient implementation. This is the task I spend the most time on (see time breakdown for all tasks below), mostly on the planning stage: once a viable solution was found, the implementation itself was pretty fast. The solution also uses a map to store the intermediate and final values, and a slice to define a tree-like structure of father-child relationships. It loops once through all actions in the action list and creates the tree structure, then navigates the tree starting from the leaves (there is as many nodes as users that have been referred).
 
@@ -61,3 +61,9 @@ Here is a list of potential improvements that have not been done due to time con
 - Add unit and/or E2E tests
 - Add additional validation to requests that expect a parameter and improve error handling
 - Better adhere to Go coding conventions
+
+# Changelog
+
+- Actions list now sorted in the main function, before initiating the server.
+- In Q3, for ALL actions of the specified type we check their next action (if there is any). Previously, actions of the specified type that also were a next action were ignored.
+- In Q3, the 24h window requirement between actions has been removed.

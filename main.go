@@ -161,18 +161,15 @@ func getNextActionBreakdownByType(c *gin.Context) {
 	totalNextActions := 0
 
 	for _, action := range actions {
-		actionDate, ok := userMap[action.UserID]
+		_, ok := userMap[action.UserID]
 		if ok {
-			// Only take into account actions that are taken within a 24h window
-			if action.CreatedAt.Sub(actionDate).Hours() <= 24.0 {
-				nextActionMap[action.Type] = nextActionMap[action.Type] + 1
-				totalNextActions++
-			}
+			nextActionMap[action.Type] = nextActionMap[action.Type] + 1
+			totalNextActions++
 			delete(userMap, action.UserID)
-		} else {
-			if action.Type == receivedType {
-				userMap[action.UserID] = action.CreatedAt
-			}
+		}
+
+		if action.Type == receivedType {
+			userMap[action.UserID] = action.CreatedAt
 		}
 	}
 
