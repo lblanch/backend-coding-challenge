@@ -263,7 +263,9 @@ func getUsersReferralIndex(c *gin.Context) {
 		referralsOrder = append(referralsOrder, leaf)
 	}
 
-	// 2. Traverse the tree in reverse (starting from the leaves)
+	// 2. Traverse the tree in reverse (starting from the leaves). In our case, we need to traverse the
+	// referralsOrder slice in order, as leaves will be in the first positions, and parent nodes
+	// will be appended at the end of the slice
 	for i := 0; i < len(referralsOrder); i++ {
 		userID := referralsOrder[i]
 
@@ -271,7 +273,7 @@ func getUsersReferralIndex(c *gin.Context) {
 
 		// If the node has a parent
 		if nodeInfo.referer >= 0 {
-			// Add it to the slice to be visited later
+			// Append it to the slice to be visited later
 			referralsOrder = append(referralsOrder, nodeInfo.referer)
 
 			// And increase their referrals amount with the current node's ones

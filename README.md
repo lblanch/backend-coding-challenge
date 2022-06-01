@@ -1,63 +1,25 @@
 # Back-end Coding Challenge
 
-A simple REST API has been implemented in Go using the Gin Web Framework. A set of endpoints have been created to serve solutions to each question in the challenge.
-
-## How to run the application
-
-As pre-requisite, an installation of Go is required for this application to run.
-
-The application can be started by executing the following command on a terminal, within the project's root folder:
-
-```bash
-go run .
-```
-
-This will start the server and make it available at http://localhost:8080
-
-## Endpoints
-
-The following API endpoints are accessible, and offer the solution for each question:
-
-- Q1: http://localhost:8080/users/:userId
-- Q2: http://localhost:8080/users/actions/:userId
-- Q3: http://localhost:8080/actions/next/:actionType
-- Q4: http://localhost:8080/users/referralIndex
+Alternative implementation of Q3 and Q4 when the actions list is not sorted.
 
 ## Implementation details
 
-Disclaimer: this was the first Go application that I've worked with.
-All the code can be found in the `main.go` file, and the `actions.json` and `users.json` can be found in the `data` folder.
+This implementation does **not** sort the actions list in before hand.
 
-It has been assumed that the actions list is always provided in chronological order (specially relevant for Q3 and Q4).
+**Q1** and **Q2** stay the same.
 
-Q1 and Q2 are pretty straightforward, they are both implemented using a simple for loop. Both are of linear complexity: O(#users) for Q1 and O(#actions) for Q2
+For **Q3**, a map is created to store an ordered list of each user's actions (of any type). We populate the map by looping through the actions slice once. At the same time, we store a reference to each action of the specified type in another map, again organized by the action's user. This is the most complex part of the implementation, around O(#actions * (#actions/#users)) if the actions are equally distributed per user, or O(#actions^2) in the worst case where all actions are taken by the same user.
 
-For Q3 the assumption was made that only the next actions taken within 24h window are relevant. It loops once through all the actions in the action list and it uses maps to store intermediate and final data, since insert, access and deletion operations in a map have constant time complexity. The solution is roughly of linear complexity too: O(#actions) + O(#unique actions).
+Next, we go through each reference we stored, and obtain what action is allocated next in the list for that same user. Because the references are pointers to list elements, who also have pointers to the "Next" and "Previous" elements in the list, this is done in constant time, so at the end the complexity is O(#specifiedTypeActions). 
 
-Q4 was the trickiest one to figure out its most efficient implementation. This is the task I spend the most time on (see time breakdown for all tasks below), mostly on the planning stage: once a viable solution was found, the implementation itself was pretty fast. The solution also uses a map to store the intermediate and final values, and a slice to define a tree-like structure of father-child relationships. It loops once through all actions in the action list and creates the tree structure, then navigates the tree starting from the leaves (there is as many nodes as users that have been referred).
+Finally, we calculate the percentages for each action type.
 
-Again, the solution is roughly of linear complexity: O(#actions) + O(#referredUsers).
+Further benchmarking and data analysis should be done to clarify which solution is faster: the previous one, which would require sorting the actions list in before hand, or this one. 
 
-**Note**, that this returns a list of users (and their referral index) only if they have made a `REFER_USER` action at least once. It does not include users whose referral index is 0. In order to include those users too, one would need to loop through all users, adding O(#users) complexity to the solution.
+For **Q4**, the solution has only changed slightly: we loop through the actions list to store the amount of direct referrals for each user, as well as who their referrer is (if any), thus creating a tree structure. At the same time, we store the ids of the users that have been referred, but have not taken a referral action themselves: they will be the leaves in our tree.
 
-Additionally, a small couple of functions have been created to generate a `user.json` file out of the `actions.json` existing file. The functions' code is included in the final version, but the call to the functions have been commented. This was due to the fact that the `users.json` file was unavailable to download. It seems to be fixed now, and the file has been downloaded and added to the repository.
+Then, we navigate the tree in reverse, starting from the leaves, and continuing to their parents, and their parents... so on. For each node, we add to its parent's referral index the node's own referral index, so indirect referrals are included in the final index.
 
-### Time breakdown
+Similarly as in the previous implementation, the complexity should be lineal, roughly of O(#actions) + O(#referrers + #referralTargets)
 
-I've spend a total of around 8h working on this challenge.
-
-- 2h setting up the REST API and reading the data files
-- 20 min implementing Q1
-- 20 min implementing Q2
-- 1h implementing Q3
-- 3h implementing Q4
-- 1h reviewing and documenting
-
-### Improvements
-
-Here is a list of potential improvements that have not been done due to time constraints and unfamiliarity with the Go language.
-
-- Refactor some of the code to other files/packages to improve readability.
-- Add unit and/or E2E tests
-- Add additional validation to requests that expect a parameter and improve error handling
-- Better adhere to Go coding conventions
+**Note**, referrals to oneself are not taken into account, otherwise the last loop would run infinitely
