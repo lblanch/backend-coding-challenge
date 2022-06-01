@@ -40,6 +40,18 @@ Again, the solution is roughly of linear complexity: O(#actions) + O(#referredUs
 
 **Note**, that this returns a list of users (and their referral index) only if they have made a `REFER_USER` action at least once. It does not include users whose referral index is 0. In order to include those users too, one would need to loop through all users, adding O(#users) complexity to the solution.
 
+**IMPORTANT:** the current implementation for Q4 does **NOT** provide correct results with the given data. The reason is that it was assumed that users that had been referred did not exist within the platform (that is could not be able to take actions) BEFORE being referred. A fast look at the data showed that there are several cases where this rule is broken, resulting in the algorithm ignoring indirect referrals that happened before the target user was referred. 
+
+For example, if we want to calculate the referral index for user 104, we have the following information:
+
+2021-10-30 20:52:45.978 +0000 UTC, user 883 refers to user 529
+2021-11-14 01:22:09.253 +0000 UTC, user 104 refers to user 883
+2021-11-28 19:57:18.742 +0000 UTC, user 529 refers to user 658
+
+The correct index for user 104 should be **3**: 1 direct referral to 883, and 2 indirect referrals, but this solution returns an index of only **2**, because user 883, the target of user 104's referral, already took a referral action BEFORE, which is not added to 104 final index. 
+
+The alternative solution for non-sorted action list (see `actions-not-sorted` branch) does return the correct result, and runs in similar linear complexity.
+
 Additionally, a small couple of functions have been created to generate a `user.json` file out of the `actions.json` existing file. The functions' code is included in the final version, but the call to the functions have been commented. This was due to the fact that the `users.json` file was unavailable to download. It seems to be fixed now, and the file has been downloaded and added to the repository.
 
 ### Time breakdown
